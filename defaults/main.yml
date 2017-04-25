@@ -1,4 +1,10 @@
 ---
+#### If systems are in AWS, use the internal IP
+nginx_ip: ''
+nexus_ip: ''
+jenkins_ip: ''
+nginx_reverse_proxy_port: ''
+
 nginx_redhat_pkg:
   - nginx
 
@@ -51,10 +57,24 @@ nginx_stream_params: []
 
 nginx_sites:
   default:
-     - listen 80 default_server
-     - server_name _
-     - root "{% if ansible_os_family == 'FreeBSD' %}/usr/local/www/nginx-dist{% else %}/usr/share/nginx/html{% endif %}"
-     - index index.html
+     - listen {{ nginx_ip }}:{{ nginx_reverse_proxy_port }}
+     - server_name {{ nginx_ip }}
+
+     - location /nexus {
+        proxy_pass http://{{ nexus_ip }}:8081/nexus;
+        proxy_set_header HOST $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /jenkins {
+        proxy_pass http://{{ jenkins_ip }}:8080/jenkins;
+        proxy_set_header HOST $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }       
+
 nginx_remove_sites: []
 
 nginx_configs: {}
